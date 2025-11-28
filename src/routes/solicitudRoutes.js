@@ -3,29 +3,29 @@ const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const controller = require('../controllers/solicitudController');
 
-// Rutas del Conductor
+// --- Rutas del Conductor ---
 router.post('/', authMiddleware, controller.crearSolicitud);
 router.get('/conductor', authMiddleware, controller.obtenerSolicitudesPorConductor);
-router.put('/satisfaccion/:id', authMiddleware, controller.registrarSatisfaccion);
+// Esta es la nueva función que agregamos:
+router.put('/satisfaccion/:id', authMiddleware, controller.confirmarSatisfaccion);
 
-// Rutas del Taller
-router.get('/taller/pendientes', authMiddleware, controller.obtenerSolicitudesPendientes);
-router.get('/taller/en-reparacion', authMiddleware, controller.obtenerSolicitudesEnReparacion);
+// --- Rutas del Taller ---
+// Usamos los nombres largos que aparecían en tu autocompletado
+router.get('/taller/pendientes', authMiddleware, controller.obtenerSolicitudesPendientesTaller); 
+router.get('/taller/en-reparacion', authMiddleware, controller.obtenerSolicitudesEnReparacionTaller);
+router.get('/taller/historial', authMiddleware, controller.obtenerHistorialTaller); 
 router.put('/diagnostico/:id', authMiddleware, controller.agregarDiagnostico);
 router.put('/finalizar/:id', authMiddleware, controller.finalizarReparacion);
 
-// Rutas de Coordinación
+// --- Rutas de Coordinación ---
 router.get('/coordinacion/aprobacion', authMiddleware, controller.obtenerSolicitudesParaAprobacion);
 router.get('/coordinacion/cierre', authMiddleware, controller.obtenerSolicitudesParaCierre);
-router.get('/coordinacion/finalizadas', authMiddleware, controller.obtenerSolicitudesFinalizadas);
+router.get('/coordinacion/historial', authMiddleware, controller.obtenerSolicitudesHistorial);
 router.put('/decision/:id', authMiddleware, controller.decidirSolicitud);
 router.put('/cierre/:id', authMiddleware, controller.cerrarProceso);
-router.get('/coordinacion/historial', authMiddleware, controller.obtenerSolicitudesPorSede);
-// @route   GET api/solicitudes/taller/historial
-// @desc    Obtener el historial de trabajos para el técnico logueado
-router.get('/taller/historial', authMiddleware, controller.obtenerHistorialTaller);
 
-// Ruta de Notificaciones
+// --- Notificaciones ---
+// Si esta función no existe en tu controlador, comenta esta línea poniendo // al principio
 router.get('/notificaciones', authMiddleware, controller.obtenerNotificaciones);
 
 module.exports = router;

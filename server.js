@@ -1,27 +1,24 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-
-const authRoutes = require('./src/routes/authRoutes');
-const solicitudRoutes = require('./src/routes/solicitudRoutes');
-const adminRoutes = require('./src/routes/adminRoutes');
-const vehiculoRoutes = require('./src/routes/vehiculoRoutes');
+const pool = require('./src/config/db');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send('¡El servidor del SGMV está funcionando!');
-});
+// --- IMPORTAR RUTAS ---
+const authRoutes = require('./src/routes/authRoutes');
+const solicitudRoutes = require('./src/routes/solicitudRoutes');
+const vehiculoRoutes = require('./src/routes/vehiculoRoutes'); // <--- Importante
+const adminRoutes = require('./src/routes/adminRoutes');       // <--- Importante
 
-// Registrar todas las rutas
+// --- USAR RUTAS ---
 app.use('/api/auth', authRoutes);
 app.use('/api/solicitudes', solicitudRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/vehiculos', vehiculoRoutes);
-app.use('/api/notifications', require('./src/routes/notificationRoutes')); // <-- AÑADIR ESTA LÍNEA
+app.use('/api/vehiculos', vehiculoRoutes); // <--- ESTO ARREGLA EL 404 DE VEHÍCULOS
+app.use('/api/admin', adminRoutes);       // <--- ESTO ARREGLA EL 404 DE USUARIOS Y ADMIN
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

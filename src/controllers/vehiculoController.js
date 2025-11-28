@@ -1,55 +1,78 @@
 const pool = require('../config/db');
 
-exports.obtenerVehiculos = async (req, res) => {
-    // Obtenemos el rol y la sede del token del usuario que hace la petición
-    const { rol, sede_id } = req.user; 
-
-    try {
-        let query;
-        const params = [];
-        
-        // Si el usuario es Admin, puede ver todos los vehículos de todas las sedes
-        if (rol === 'Admin') {
-            query = `
-                SELECT v.*, s.nombre as nombre_sede 
-                FROM vehiculos v 
-                LEFT JOIN sedes s ON v.sede_id = s.id 
-                ORDER BY v.nombre ASC
-            `;
-        } else {
-            // Si es cualquier otro rol (ej. Conductor), solo ve los vehículos de SU sede
-            query = `
-                SELECT v.*, s.nombre as nombre_sede 
-                FROM vehiculos v 
-                LEFT JOIN sedes s ON v.sede_id = s.id 
-                WHERE v.sede_id = $1
-                ORDER BY v.nombre ASC
-            `;
-            params.push(sede_id);
-        }
-
-        const vehiculos = await pool.query(query, params);
-        res.json(vehiculos.rows);
-    } catch (err) { 
-        console.error(err.message); 
-        res.status(500).send('Error en el servidor'); 
-    }
+exports.crearVehiculo = async (req, res) => {
+  const { nombre, placa, marca, modelo, sede_id } = req.body;
+  try {
+    const nuevo = await pool.query(
+      "INSERT INTO vehiculos (nombre, placa, marca, modelo, sede_id) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [nombre, placa, marca, modelo, sede_id]
+    );
+    res.json(nuevo.rows[0]);
+  } catch (err) { 
+    console.error(err); 
+    res.status(500).json({ error: 'Error creando vehículo' }); 
+  }
 };
 
-exports.crearVehiculo = async (req, res) => {
-    // Solo un admin puede crear vehículos
-    if (req.user.rol !== 'Admin') {
-        return res.status(403).json({ msg: 'Acceso denegado.' });
+// --- FUNCIÓN MODIFICADA PARA FILTRAR POR SEDE ---
+exports.obtenerVehiculos = async (req, res) => {
+  // Obtenemos el rol y la sede del usuario que hace la petición (viene del Token)
+  const { rol, sede_id } = req.user;
+
+  try {
+    let query = "";
+    let params = [];
+
+    // CASO 1: Es Administrador -> Ve todos los vehículos de todas las sedes
+    if (rol === 'Admin') {
+       query = `
+         SELECT v.*, s.nombre as nombre_sede 
+         FROM vehiculos v 
+         LEFT JOIN sedes s ON v.sede_id = s.id 
+         ORDER BY v.sede_id, v.nombre
+       `;
+    } 
+    // CASO 2: Es Conductor, Taller o Coordinación -> Solo ve los vehículos de SU sede
+    else {
+       query = "SELECT * FROM vehiculos WHERE sede_id = $1 ORDER BY nombre";
+       params = [sede_id];
     }
-    const { nombre, placa, marca, modelo, sede_id } = req.body;
-    try {
-        const newVehiculo = await pool.query(
-            'INSERT INTO vehiculos (nombre, placa, marca, modelo, sede_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [nombre, placa, marca, modelo, sede_id]
-        );
-        res.status(201).json(newVehiculo.rows[0]);
-    } catch (err) {
-        if (err.code === '23505') return res.status(400).json({ msg: 'La placa ya está registrada.' });
-        res.status(500).send('Error en el servidor');
-    }
+
+    const vehiculos = await pool.query(query, params);
+    res.json(vehiculos.rows);
+
+  } catch (err) { 
+    console.error(err); 
+    res.status(500).json({ error: 'Error obteniendo vehículos' }); 
+  }
+};
+// ------------------------------------------------
+
+exports.obtenerEstadoFlota = async (req, res) => {
+  try {
+    // Esta consulta determina si un vehículo está en taller si tiene una solicitud activa
+    const query = `
+      SELECT 
+        v.id, 
+        v.nombre, 
+        v.placa, 
+        s.nombre AS sede,
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM solicitudes sol 
+            WHERE sol.id_vehiculo = v.id 
+            AND sol.estado NOT IN ('Proceso Finalizado', 'Rechazado')
+          ) THEN 'EN TALLER'
+          ELSE 'OPERATIVO'
+        END AS estado_actual
+      FROM vehiculos v
+      LEFT JOIN sedes s ON v.sede_id = s.id
+      ORDER BY estado_actual ASC, v.nombre ASC;
+    `;
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener estado de flota' });
+  }
 };
