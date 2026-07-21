@@ -76,3 +76,24 @@ exports.obtenerEstadoFlota = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener estado de flota' });
   }
 };
+
+exports.actualizarSedeVehiculo = async (req, res) => {
+    const { id } = req.params;
+    const { sede_id } = req.body;
+    
+    try {
+        const result = await pool.query(
+            'UPDATE vehiculos SET sede_id = $1 WHERE id = $2 RETURNING *',
+            [sede_id, id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ msg: 'Vehículo no encontrado' });
+        }
+        
+        res.json({ msg: 'Sede actualizada correctamente', vehiculo: result.rows[0] });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al actualizar la sede del vehículo' });
+    }
+};
