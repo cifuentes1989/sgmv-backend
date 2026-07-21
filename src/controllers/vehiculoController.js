@@ -77,6 +77,7 @@ exports.obtenerEstadoFlota = async (req, res) => {
   }
 };
 
+// --- NUEVA FUNCIÓN: ACTUALIZAR SEDE ---
 exports.actualizarSedeVehiculo = async (req, res) => {
     const { id } = req.params;
     const { sede_id } = req.body;
@@ -93,7 +94,7 @@ exports.actualizarSedeVehiculo = async (req, res) => {
         
         res.json({ msg: 'Sede actualizada correctamente', vehiculo: result.rows[0] });
     } catch (error) {
-        console.error(error);
+        console.error('Error al actualizar la sede:', error);
         res.status(500).json({ error: 'Error al actualizar la sede del vehículo' });
     }
 };
