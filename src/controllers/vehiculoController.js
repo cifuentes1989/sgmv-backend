@@ -24,6 +24,7 @@ exports.obtenerVehiculos = async (req, res) => {
     let params = [];
 
     // CASO 1: Es Administrador -> Ve todos los vehículos de todas las sedes
+    // NUEVO: Agregamos la columna fuera_de_servicio en el SELECT
     if (rol === 'Admin') {
        query = `
          SELECT v.*, s.nombre as nombre_sede 
@@ -50,12 +51,14 @@ exports.obtenerVehiculos = async (req, res) => {
 
 exports.obtenerEstadoFlota = async (req, res) => {
   try {
-    // Esta consulta determina si un vehículo está en taller si tiene una solicitud activa
+    // NUEVO: Modificamos el SELECT para incluir v.fuera_de_servicio.
+    // Con esto los contadores del Frontend podrán hacer la suma correctamente.
     const query = `
       SELECT 
         v.id, 
         v.nombre, 
         v.placa, 
+        v.fuera_de_servicio, 
         s.nombre AS sede,
         CASE 
           WHEN EXISTS (

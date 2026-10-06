@@ -7,6 +7,7 @@ const baseQuery = `
         u_cond.nombre_completo as nombre_conductor,
         v.nombre as nombre_vehiculo,
         v.placa as placa_vehiculo,
+        v.fuera_de_servicio,  /* <--- ESTA ES LA LÍNEA NUEVA */
         u_tall.nombre_completo as nombre_tecnico,
         u_coor.nombre_completo as nombre_coordinador
     FROM 
