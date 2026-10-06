@@ -107,13 +107,24 @@ exports.agregarDiagnostico = async (req, res) => {
 exports.finalizarReparacion = async (req, res) => {
   const { id } = req.params;
   const { trabajos_realizados, repuestos_utilizados, observaciones_taller, firma_taller_finalizacion } = req.body;
+  
   try {
+    // 1. Obtenemos el ID del vehículo asociado a esta solicitud
+    const solicitudRes = await pool.query('SELECT id_vehiculo FROM solicitudes WHERE id = $1', [id]);
+    
+    // 2. Finalizamos la reparación
     await pool.query(
       `UPDATE solicitudes SET estado = 'Listo para Entrega', hora_salida_taller = NOW(), trabajos_realizados = $1, repuestos_utilizados = $2, observaciones_taller = $3, firma_taller_finalizacion = $4 WHERE id = $5`,
       [trabajos_realizados, repuestos_utilizados, observaciones_taller, firma_taller_finalizacion, id]
     );
+
+    // 3. NUEVO: Automáticamente quitamos el estado "Fuera de Servicio" del vehículo
+    if (solicitudRes.rows.length > 0) {
+        await pool.query('UPDATE vehiculos SET fuera_de_servicio = FALSE WHERE id = $1', [solicitudRes.rows[0].id_vehiculo]);
+    }
+
     try { sendNotificationToRole('Conductor', { title: 'Vehículo Listo', body: `Su vehículo solicitud #${id} está listo para entrega.`}); } catch(e){}
-    res.json({msg: "Reparación finalizada"});
+    res.json({msg: "Reparación finalizada y vehículo operativo."});
   } catch (err) { console.error(err.message); res.status(500).send('Error en el servidor'); }
 };
 
@@ -141,19 +152,46 @@ exports.obtenerSolicitudesParaAprobacion = async (req, res) => {
 };
 
 exports.decidirSolicitud = async (req, res) => {
-  const { decision, motivo_rechazo, firma_coordinacion_aprobacion } = req.body;
+  // NUEVO: Recibimos la variable marcar_fuera_servicio desde el frontend
+  const { decision, motivo_rechazo, firma_coordinacion_aprobacion, marcar_fuera_servicio } = req.body;
   let nuevoEstado = (decision === 'Aprobado') ? 'En Reparación' : 'Rechazado';
+  
   try {
+    // 1. Obtenemos el id del vehículo
+    const solicitudRes = await pool.query('SELECT id_vehiculo FROM solicitudes WHERE id = $1', [req.params.id]);
+
+    // 2. Guardamos la decisión
     await pool.query(
       `UPDATE solicitudes SET estado = $1, id_coordinador_aprueba = $2, motivo_rechazo = $3, fecha_aprobacion_rechazo = NOW(), firma_coordinacion_aprobacion = $4 WHERE id = $5`,
       [nuevoEstado, req.user.id, motivo_rechazo, firma_coordinacion_aprobacion, req.params.id]
     );
+
+    // 3. NUEVO: Si lo aprobó Y marcó la casilla, ponemos el vehículo fuera de servicio
     if(nuevoEstado === 'En Reparación') {
+        if(marcar_fuera_servicio && solicitudRes.rows.length > 0) {
+            await pool.query('UPDATE vehiculos SET fuera_de_servicio = TRUE WHERE id = $1', [solicitudRes.rows[0].id_vehiculo]);
+        }
         try { sendNotificationToRole('Taller', { title: 'Solicitud Aprobada', body: `La solicitud #${req.params.id} fue aprobada.`}); } catch(e){}
     }
     res.json({ msg: 'Decisión registrada' });
   } catch (err) { console.error(err.message); res.status(500).send('Error en el servidor'); }
 };
+
+// NUEVO ENDPOINT PARA EL TALLER: Reportar Fuera de Servicio Manualmente
+exports.reportarFueraDeServicioManual = async (req, res) => {
+  try {
+    const solicitudRes = await pool.query('SELECT id_vehiculo FROM solicitudes WHERE id = $1', [req.params.id]);
+    if (solicitudRes.rows.length > 0) {
+        await pool.query('UPDATE vehiculos SET fuera_de_servicio = TRUE WHERE id = $1', [solicitudRes.rows[0].id_vehiculo]);
+        res.json({ msg: 'Vehículo reportado como fuera de servicio' });
+    } else {
+        res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+  } catch (err) {
+    console.error(err.message); res.status(500).send('Error en el servidor');
+  }
+};
+
 
 exports.obtenerSolicitudesParaCierre = async (req, res) => {
     const { sede_id } = req.user;
