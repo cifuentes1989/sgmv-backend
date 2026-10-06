@@ -16,7 +16,7 @@ router.get('/taller/en-reparacion', authMiddleware, controller.obtenerSolicitude
 router.get('/taller/historial', authMiddleware, controller.obtenerHistorialTaller); 
 router.put('/diagnostico/:id', authMiddleware, controller.agregarDiagnostico);
 router.put('/finalizar/:id', authMiddleware, controller.finalizarReparacion);
-router.put('/taller/fuera-servicio/:id', authMiddleware, solicitudesController.reportarFueraDeServicioManual);
+router.put('/taller/fuera-servicio/:id', authMiddleware, controller.reportarFueraDeServicioManual);
 // --- Rutas de Coordinación ---
 router.get('/coordinacion/aprobacion', authMiddleware, controller.obtenerSolicitudesParaAprobacion);
 router.get('/coordinacion/cierre', authMiddleware, controller.obtenerSolicitudesParaCierre);
