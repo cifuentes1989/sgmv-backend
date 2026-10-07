@@ -259,10 +259,9 @@ exports.obtenerNotificaciones = async (req, res) => {
 
 const { admin } = require('../notifications'); // Importamos Firebase
 
-// --- NUEVO: ARCHIVO (Subir Evidencia a Cloudinary) ---
+// --- ARCHIVO (Subir Evidencia a Cloudinary) ---
 const cloudinary = require('cloudinary').v2;
 
-// Configuramos Cloudinary usando variables de entorno
 cloudinary.config({ 
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
     api_key: process.env.CLOUDINARY_API_KEY, 
@@ -278,11 +277,14 @@ exports.subirEvidenciaYFinalizar = async (req, res) => {
             return res.status(400).json({ error: 'No se recibió ningún archivo de evidencia.' });
         }
 
-        // 1. Función experta para subir el archivo en memoria directamente a Cloudinary
         const uploadToCloudinary = (buffer) => {
             return new Promise((resolve, reject) => {
                 const uploadStream = cloudinary.uploader.upload_stream(
-                    { folder: 'sgmv_evidencias', resource_type: 'auto' }, // auto acepta PDF o Imágenes
+                    { 
+                        folder: 'sgmv_evidencias', 
+                        resource_type: 'auto',
+                        access_mode: 'public'
+                    },
                     (error, result) => {
                         if (error) reject(error);
                         else resolve(result);
@@ -292,11 +294,9 @@ exports.subirEvidenciaYFinalizar = async (req, res) => {
             });
         };
 
-        // 2. Ejecutar la subida
         const result = await uploadToCloudinary(file.buffer);
         const urlSegura = result.secure_url;
 
-        // 3. Actualizar la Base de Datos y pasar a "Proceso Finalizado"
         await pool.query(
             "UPDATE solicitudes SET estado = 'Proceso Finalizado', url_evidencia_externa = $1, fecha_cierre_proceso = NOW() WHERE id = $2",
             [urlSegura, id]
