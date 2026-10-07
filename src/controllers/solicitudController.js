@@ -259,7 +259,16 @@ exports.obtenerNotificaciones = async (req, res) => {
 
 const { admin } = require('../notifications'); // Importamos Firebase
 
-// --- NUEVO: ARCHIVO (Subir Evidencia) ---
+// --- NUEVO: ARCHIVO (Subir Evidencia a Cloudinary) ---
+const cloudinary = require('cloudinary').v2;
+
+// Configuramos Cloudinary usando variables de entorno
+cloudinary.config({ 
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
+    api_key: process.env.CLOUDINARY_API_KEY, 
+    api_secret: process.env.CLOUDINARY_API_SECRET 
+});
+
 exports.subirEvidenciaYFinalizar = async (req, res) => {
     try {
         const { id } = req.params;
@@ -269,29 +278,33 @@ exports.subirEvidenciaYFinalizar = async (req, res) => {
             return res.status(400).json({ error: 'No se recibió ningún archivo de evidencia.' });
         }
 
-        // 1. Subir a Firebase Storage
-        const bucket = admin.storage().bucket();
-        // Limpiamos el nombre para que no tenga espacios raros
-        const nombreLimpio = file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
-        const nombreArchivo = `evidencias/solicitud_${id}_${Date.now()}_${nombreLimpio}`;
-        const fileUpload = bucket.file(nombreArchivo);
+        // 1. Función experta para subir el archivo en memoria directamente a Cloudinary
+        const uploadToCloudinary = (buffer) => {
+            return new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    { folder: 'sgmv_evidencias', resource_type: 'auto' }, // auto acepta PDF o Imágenes
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                );
+                uploadStream.end(buffer);
+            });
+        };
 
-        await fileUpload.save(file.buffer, {
-            metadata: { contentType: file.mimetype }
-        });
+        // 2. Ejecutar la subida
+        const result = await uploadToCloudinary(file.buffer);
+        const urlSegura = result.secure_url;
 
-        // 2. Generar enlace seguro que no caduca (válido hasta el año 2100)
-        const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '01-01-2100' });
-
-        // 3. Actualizar BD y pasar a "Proceso Finalizado"
+        // 3. Actualizar la Base de Datos y pasar a "Proceso Finalizado"
         await pool.query(
             "UPDATE solicitudes SET estado = 'Proceso Finalizado', url_evidencia_externa = $1, fecha_cierre_proceso = NOW() WHERE id = $2",
-            [url, id]
+            [urlSegura, id]
         );
 
-        res.json({ msg: 'Evidencia subida y proceso finalizado con éxito', url });
+        res.json({ msg: 'Evidencia subida a Cloudinary y proceso finalizado', url: urlSegura });
     } catch (error) {
-        console.error('Error al subir evidencia:', error);
-        res.status(500).json({ error: 'Error interno al procesar el archivo.' });
+        console.error('Error al subir evidencia a Cloudinary:', error);
+        res.status(500).json({ error: 'Error interno al procesar el archivo en Cloudinary.' });
     }
 };
