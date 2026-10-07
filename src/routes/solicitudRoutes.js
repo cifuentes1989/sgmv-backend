@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const controller = require('../controllers/solicitudController');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() }); // Guarda temporalmente en memoria RAM para envío a Firebase
 
 // --- Rutas del Conductor ---
 router.post('/', authMiddleware, controller.crearSolicitud);
@@ -27,5 +29,5 @@ router.put('/cierre/:id', authMiddleware, controller.cerrarProceso);
 // --- Notificaciones ---
 // Si esta función no existe en tu controlador, comenta esta línea poniendo // al principio
 router.get('/notificaciones', authMiddleware, controller.obtenerNotificaciones);
-
-module.exports = router;
+// --- Rutas de Archivo / Evidencia ---
+router.put('/archivo/subir-evidencia/:id', authMiddleware, upload.single('evidencia'), controller.subirEvidenciaYFinalizar);
