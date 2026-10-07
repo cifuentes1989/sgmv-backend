@@ -1,14 +1,25 @@
 const admin = require('firebase-admin');
 const pool = require('./config/db');
+const fs = require('fs');
 
 try {
-    admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-        storageBucket: 'sgmv-notificaciones.appspot.com' // <-- AÑADIDO: Tu disco duro en Firebase
-    });
-    console.log("Firebase Admin SDK inicializado.");
+    let serviceAccount;
+    // Lógica inteligente: Si está en Render, busca en la bóveda. Si está local, busca en la carpeta.
+    if (fs.existsSync('/etc/secrets/firebase-credentials.json')) {
+        serviceAccount = require('/etc/secrets/firebase-credentials.json');
+    } else {
+        serviceAccount = require('../firebase-credentials.json');
+    }
+    
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            storageBucket: 'sgmv-notificaciones.appspot.com'
+        });
+        console.log("✅ Firebase Admin inicializado correctamente con credenciales.");
+    }
 } catch (error) {
-    console.error("Error al inicializar Firebase Admin SDK:", error.message);
+    console.error("❌ Error crítico al inicializar Firebase:", error.message);
 }
 
 exports.sendNotificationToRole = async (rol, payload) => {
@@ -20,11 +31,9 @@ exports.sendNotificationToRole = async (rol, payload) => {
         const tokens = users.rows.map(user => user.push_subscription.token);
         if (tokens.length > 0) {
             const message = { notification: payload, tokens: tokens };
-            const response = await admin.messaging().sendEachForMulticast(message);
-            console.log(response.successCount + ' notificaciones enviadas exitosamente.');
+            await admin.messaging().sendEachForMulticast(message);
         }
-    } catch (e) { console.error("Error al notificar al rol:", e); }
+    } catch (e) { console.error("Error al enviar notificaciones:", e); }
 };
 
-// <-- AÑADIDO: Exportamos admin para usar Storage en los controladores
 exports.admin = admin;

@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// --- MULTER PARA SUBIR ARCHIVOS ---
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -28,8 +27,8 @@ router.get('/coordinacion/historial', authMiddleware, controller.obtenerSolicitu
 router.put('/decision/:id', authMiddleware, controller.decidirSolicitud);
 router.put('/cierre/:id', authMiddleware, controller.cerrarProceso);
 
-// --- Rutas de Archivo / Evidencia ---
+// --- Rutas Generales / Archivos / Notificaciones ---
+router.get('/notificaciones', authMiddleware, controller.obtenerNotificaciones); // <-- RECUPERADA
 router.put('/archivo/subir-evidencia/:id', authMiddleware, upload.single('evidencia'), controller.subirEvidenciaYFinalizar);
 
-// 🚨 ¡ESTA ES LA LÍNEA CRÍTICA QUE FALTABA! 🚨
 module.exports = router;
