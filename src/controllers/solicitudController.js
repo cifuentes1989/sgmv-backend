@@ -207,12 +207,12 @@ exports.obtenerSolicitudesParaCierre = async (req, res) => {
 exports.cerrarProceso = async (req, res) => {
   const { firma_coordinacion_cierre } = req.body;
   try {
-    // CAMBIO: Aquí es donde FINALMENTE ponemos 'Proceso Finalizado' y la fecha de cierre
+    // CAMBIO: Pasa a 'Pendiente de Archivo', ya NO a 'Proceso Finalizado' directo.
     await pool.query(
-      "UPDATE solicitudes SET estado = 'Proceso Finalizado', fecha_cierre_proceso = NOW(), firma_coordinacion_cierre = $1 WHERE id = $2",
+      "UPDATE solicitudes SET estado = 'Pendiente de Archivo', firma_coordinacion_cierre = $1 WHERE id = $2",
       [firma_coordinacion_cierre, req.params.id]
     );
-    res.json({ msg: 'Proceso cerrado' });
+    res.json({ msg: 'Proceso cerrado operativamente. Pendiente de archivo.' });
   } catch (err) { console.error(err.message); res.status(500).send('Error en el servidor'); }
 };
 
@@ -254,5 +254,44 @@ exports.obtenerNotificaciones = async (req, res) => {
     } catch (err) { 
         console.error("Error en notificaciones:", err.message); 
         res.status(500).send('Error en el servidor'); 
+    }
+};
+
+const { admin } = require('../notifications'); // Importamos Firebase
+
+// --- NUEVO: ARCHIVO (Subir Evidencia) ---
+exports.subirEvidenciaYFinalizar = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ error: 'No se recibió ningún archivo de evidencia.' });
+        }
+
+        // 1. Subir a Firebase Storage
+        const bucket = admin.storage().bucket();
+        // Limpiamos el nombre para que no tenga espacios raros
+        const nombreLimpio = file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
+        const nombreArchivo = `evidencias/solicitud_${id}_${Date.now()}_${nombreLimpio}`;
+        const fileUpload = bucket.file(nombreArchivo);
+
+        await fileUpload.save(file.buffer, {
+            metadata: { contentType: file.mimetype }
+        });
+
+        // 2. Generar enlace seguro que no caduca (válido hasta el año 2100)
+        const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '01-01-2100' });
+
+        // 3. Actualizar BD y pasar a "Proceso Finalizado"
+        await pool.query(
+            "UPDATE solicitudes SET estado = 'Proceso Finalizado', url_evidencia_externa = $1, fecha_cierre_proceso = NOW() WHERE id = $2",
+            [url, id]
+        );
+
+        res.json({ msg: 'Evidencia subida y proceso finalizado con éxito', url });
+    } catch (error) {
+        console.error('Error al subir evidencia:', error);
+        res.status(500).json({ error: 'Error interno al procesar el archivo.' });
     }
 };

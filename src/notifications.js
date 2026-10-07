@@ -3,7 +3,8 @@ const pool = require('./config/db');
 
 try {
     admin.initializeApp({
-        credential: admin.credential.applicationDefault()
+        credential: admin.credential.applicationDefault(),
+        storageBucket: 'sgmv-notificaciones.appspot.com' // <-- AÑADIDO: Tu disco duro en Firebase
     });
     console.log("Firebase Admin SDK inicializado.");
 } catch (error) {
@@ -24,3 +25,6 @@ exports.sendNotificationToRole = async (rol, payload) => {
         }
     } catch (e) { console.error("Error al notificar al rol:", e); }
 };
+
+// <-- AÑADIDO: Exportamos admin para usar Storage en los controladores
+exports.admin = admin;
