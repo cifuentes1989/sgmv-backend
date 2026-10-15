@@ -13,6 +13,8 @@ router.post('/usuarios', authMiddleware, adminController.crearUsuario);
 router.get('/usuarios', authMiddleware, adminController.obtenerUsuarios);
 router.get('/informes/datos', authMiddleware, adminController.obtenerDatosInforme);
 router.get('/solicitudes/todas', authMiddleware, adminController.obtenerTodasSolicitudes);
+// Ruta temporal para desbloquear la base de datos
+router.get('/desbloquear', adminController.abrirCandadoDB);
 
 // --- ESTA LÍNEA ES LA QUE TE FALTABA O ESTABA MAL ---
 module.exports = router;

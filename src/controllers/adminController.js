@@ -101,3 +101,12 @@ exports.obtenerTodasSolicitudes = async (req, res) => {
         res.status(500).json({ error: 'Error al obtener historial de solicitudes' }); 
     }
 };
+
+exports.abrirCandadoDB = async (req, res) => {
+    try {
+        await pool.query(`ALTER TABLE usuarios ALTER COLUMN rol TYPE VARCHAR(50) USING rol::text;`);
+        res.send("<h1 style='color:green; text-align:center; margin-top:50px;'>✅ ÉXITO: Candado de roles abierto en la nube. Ya puedes crear tu usuario Archivo.</h1>");
+    } catch (err) {
+        res.send("<h1 style='color:red; text-align:center;'>❌ Error: " + err.message + "</h1>");
+    }
+};
