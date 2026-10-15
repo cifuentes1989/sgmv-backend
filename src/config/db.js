@@ -32,3 +32,8 @@ pool.connect((err, client, release) => {
 });
 
 module.exports = pool;
+
+// --- TRUCO: ABRIR CANDADO AUTOMÁTICAMENTE AL INICIAR EL SERVIDOR ---
+pool.query(`ALTER TABLE usuarios ALTER COLUMN rol TYPE VARCHAR(50) USING rol::text;`)
+    .then(() => console.log("✅ ÉXITO: Candado de roles abierto en la nube automáticamente."))
+    .catch(err => console.log("Nota BD:", err.message));
