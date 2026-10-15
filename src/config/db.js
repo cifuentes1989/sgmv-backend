@@ -33,7 +33,10 @@ pool.connect((err, client, release) => {
 
 module.exports = pool;
 
-// --- TRUCO: ABRIR CANDADO AUTOMÁTICAMENTE AL INICIAR EL SERVIDOR ---
-pool.query(`ALTER TABLE usuarios ALTER COLUMN rol TYPE VARCHAR(50) USING rol::text;`)
-    .then(() => console.log("✅ ÉXITO: Candado de roles abierto en la nube automáticamente."))
-    .catch(err => console.log("Nota BD:", err.message));
+// --- TRUCO: ACTUALIZAR EL CANDADO ESTRICTO DE ROLES AUTOMÁTICAMENTE ---
+pool.query(`
+    ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_check;
+    ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_check CHECK (rol IN ('Admin', 'Coordinacion', 'Taller', 'Conductor', 'Archivo'));
+`)
+.then(() => console.log("✅ ÉXITO TOTAL: Candado 'usuarios_rol_check' actualizado. Ya acepta Archivo."))
+.catch(err => console.error("❌ Error actualizando candado:", err.message));
