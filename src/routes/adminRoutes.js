@@ -16,5 +16,6 @@ router.get('/solicitudes/todas', authMiddleware, adminController.obtenerTodasSol
 // Ruta temporal para desbloquear la base de datos
 router.get('/desbloquear', adminController.abrirCandadoDB);
 
+
 // --- ESTA LÍNEA ES LA QUE TE FALTABA O ESTABA MAL ---
 module.exports = router;

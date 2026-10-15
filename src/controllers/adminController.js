@@ -104,9 +104,12 @@ exports.obtenerTodasSolicitudes = async (req, res) => {
 
 exports.abrirCandadoDB = async (req, res) => {
     try {
-        await pool.query(`ALTER TABLE usuarios ALTER COLUMN rol TYPE VARCHAR(50) USING rol::text;`);
-        res.send("<h1 style='color:green; text-align:center; margin-top:50px;'>✅ ÉXITO: Candado de roles abierto en la nube. Ya puedes crear tu usuario Archivo.</h1>");
+        await pool.query(`
+            ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_check;
+            ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_check CHECK (rol IN ('Admin', 'Coordinacion', 'Taller', 'Conductor', 'Archivo'));
+        `);
+        res.send("<h1 style='color:green; text-align:center; margin-top:50px;'>✅ ÉXITO TOTAL: La base de datos ya acepta el rol Archivo.</h1>");
     } catch (err) {
-        res.send("<h1 style='color:red; text-align:center;'>❌ Error: " + err.message + "</h1>");
+        res.send("<h1 style='color:red; text-align:center; margin-top:50px;'>❌ Error en la base de datos: " + err.message + "</h1>");
     }
 };
