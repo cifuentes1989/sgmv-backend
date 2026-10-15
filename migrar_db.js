@@ -1,15 +1,21 @@
-const pool = require('./src/config/db'); // Ajusta esta ruta si tu db.js está en otra carpeta
+const pool = require('./src/config/db');
 
-async function actualizarRoles() {
+async function ejecutarMigracion() {
     try {
-        console.log("Iniciando actualización de la base de datos...");
-        await pool.query(`ALTER TABLE usuarios ALTER COLUMN rol TYPE VARCHAR(50) USING rol::text;`);
-        console.log("✅ ÉXITO: El candado fue removido. Ya puedes crear el usuario Archivo.");
+        console.log("⏳ [Migración] Iniciando actualización de reglas en la base de datos...");
+        
+        // 1. Eliminamos el candado viejo
+        await pool.query(`ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_check;`);
+        
+        // 2. Creamos el candado nuevo incluyendo "Archivo"
+        await pool.query(`ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_check CHECK (rol IN ('Admin', 'Coordinacion', 'Taller', 'Conductor', 'Archivo'));`);
+        
+        console.log("✅ [Migración] Éxito: La base de datos ha sido actualizada permanentemente.");
+        process.exit(0); // Le indica al servidor que puede continuar encendiéndose
     } catch (error) {
-        console.error("❌ Error al actualizar:", error.message);
-    } finally {
-        pool.end(); 
+        console.error("❌ [Migración] Error crítico:", error.message);
+        process.exit(1); 
     }
 }
 
-actualizarRoles();
+ejecutarMigracion();
