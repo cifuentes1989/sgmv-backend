@@ -11,6 +11,8 @@ const controller = require('../controllers/solicitudController');
 router.post('/', authMiddleware, controller.crearSolicitud);
 router.get('/conductor', authMiddleware, controller.obtenerSolicitudesPorConductor);
 router.put('/satisfaccion/:id', authMiddleware, controller.confirmarSatisfaccion);
+// 👇 NUEVA RUTA AQUÍ (Ubicada correctamente):
+router.put('/:id/entrega-taller', authMiddleware, controller.entregarTallerExterno);
 
 // --- Rutas del Taller ---
 router.get('/taller/pendientes', authMiddleware, controller.obtenerSolicitudesPendientesTaller);
@@ -28,14 +30,7 @@ router.put('/decision/:id', authMiddleware, controller.decidirSolicitud);
 router.put('/cierre/:id', authMiddleware, controller.cerrarProceso);
 
 // --- Rutas Generales / Archivos / Notificaciones ---
-router.get('/notificaciones', authMiddleware, controller.obtenerNotificaciones); // <-- RECUPERADA
+router.get('/notificaciones', authMiddleware, controller.obtenerNotificaciones); 
 router.put('/archivo/subir-evidencia/:id', authMiddleware, upload.single('evidencia'), controller.subirEvidenciaYFinalizar);
 
-// --- Rutas del Conductor ---
-router.post('/', authMiddleware, controller.crearSolicitud);
-router.get('/conductor', authMiddleware, controller.obtenerSolicitudesPorConductor);
-router.put('/satisfaccion/:id', authMiddleware, controller.confirmarSatisfaccion);
-
-// 👇 NUEVA RUTA AQUÍ:
-router.put('/:id/entrega-taller', authMiddleware, controller.entregarTallerExterno);
 module.exports = router;
