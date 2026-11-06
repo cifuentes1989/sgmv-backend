@@ -31,4 +31,11 @@ router.put('/cierre/:id', authMiddleware, controller.cerrarProceso);
 router.get('/notificaciones', authMiddleware, controller.obtenerNotificaciones); // <-- RECUPERADA
 router.put('/archivo/subir-evidencia/:id', authMiddleware, upload.single('evidencia'), controller.subirEvidenciaYFinalizar);
 
+// --- Rutas del Conductor ---
+router.post('/', authMiddleware, controller.crearSolicitud);
+router.get('/conductor', authMiddleware, controller.obtenerSolicitudesPorConductor);
+router.put('/satisfaccion/:id', authMiddleware, controller.confirmarSatisfaccion);
+
+// 👇 NUEVA RUTA AQUÍ:
+router.put('/:id/entrega-taller', authMiddleware, controller.entregarTallerExterno);
 module.exports = router;

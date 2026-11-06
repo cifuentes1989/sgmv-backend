@@ -42,6 +42,40 @@ exports.obtenerSolicitudesPorConductor = async (req, res) => {
     } catch (err) { console.error(err.message); res.status(500).send('Error en el servidor'); }
 };
 
+// 🚀 NUEVO: ENDPOINT PARA ENTREGAR AL TALLER EXTERNO
+exports.entregarTallerExterno = async (req, res) => {
+  const { id } = req.params;
+  const { firmaBase64, nombreRecibe } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE solicitudes 
+       SET estado = 'En Reparación', 
+           firma_proveedor_externo = $1,
+           nombre_quien_recibe = $2,
+           fecha_recepcion_taller = NOW()
+       WHERE id = $3 RETURNING *`,
+      [firmaBase64, nombreRecibe, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+    
+    try { 
+        sendNotificationToRole('Coordinacion', { 
+            title: 'Vehículo en Taller Externo', 
+            body: `El conductor entregó el vehículo de la solicitud #${id} al taller externo.` 
+        }); 
+    } catch(e){}
+
+    res.json({ msg: 'Vehículo entregado al taller externo con éxito', solicitud: result.rows[0] });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: 'Error al registrar firma del taller externo' });
+  }
+};
+
 // --- CORRECCIÓN CLAVE AQUÍ ---
 exports.confirmarSatisfaccion = async (req, res) => {
   const { id } = req.params;
