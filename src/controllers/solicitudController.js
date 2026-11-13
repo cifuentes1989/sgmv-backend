@@ -293,7 +293,7 @@ exports.obtenerNotificaciones = async (req, res) => {
 
 const { admin } = require('../notifications'); // Importamos Firebase
 
-// --- ARCHIVO (Subir Evidencia a Cloudinary) ---
+// --- ARCHIVO (Subir Evidencias a Cloudinary) ---
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({ 
@@ -302,43 +302,71 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET 
 });
 
-exports.subirEvidenciaYFinalizar = async (req, res) => {
+// Función auxiliar reutilizable para subir archivos a Cloudinary
+const uploadToCloudinary = (buffer, folder) => {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { 
+                folder: folder, 
+                resource_type: 'auto',
+                access_mode: 'public'
+            },
+            (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+            }
+        );
+        uploadStream.end(buffer);
+    });
+};
+
+// 1. Subir solo el documento de INGRESO (No cierra el proceso)
+exports.subirDocumentoIngreso = async (req, res) => {
     try {
         const { id } = req.params;
         const file = req.file;
 
         if (!file) {
-            return res.status(400).json({ error: 'No se recibió ningún archivo de evidencia.' });
+            return res.status(400).json({ error: 'No se recibió el documento de ingreso.' });
         }
 
-        const uploadToCloudinary = (buffer) => {
-            return new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    { 
-                        folder: 'sgmv_evidencias', 
-                        resource_type: 'auto',
-                        access_mode: 'public'
-                    },
-                    (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                );
-                uploadStream.end(buffer);
-            });
-        };
-
-        const result = await uploadToCloudinary(file.buffer);
+        const result = await uploadToCloudinary(file.buffer, 'sgmv_ingresos');
         const urlSegura = result.secure_url;
-
+        
         await pool.query(
-            "UPDATE solicitudes SET estado = 'Proceso Finalizado', url_evidencia_externa = $1, fecha_cierre_proceso = NOW() WHERE id = $2",
+            "UPDATE solicitudes SET url_doc_ingreso = $1 WHERE id = $2",
             [urlSegura, id]
         );
-
-        res.json({ msg: 'Evidencia subida a Cloudinary y proceso finalizado', url: urlSegura });
+        
+        res.json({ msg: 'Documento de Ingreso guardado con éxito', url: urlSegura });
     } catch (error) {
-        console.error('Error al subir evidencia a Cloudinary:', error);
-        res.status(500).json({ error: 'Error interno al procesar el archivo en Cloudinary.' });
+        console.error('Error al subir ingreso a Cloudinary:', error);
+        res.status(500).json({ error: 'Error interno al procesar el documento de ingreso.' });
+    }
+};
+
+// 2. Subir el documento de SALIDA y CERRAR el proceso
+exports.subirDocumentoSalidaYCerrar = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ error: 'No se recibió el documento de salida.' });
+        }
+
+        const result = await uploadToCloudinary(file.buffer, 'sgmv_salidas');
+        const urlSegura = result.secure_url;
+        
+        // Actualiza el estado a Proceso Finalizado y guarda la URL de salida
+        await pool.query(
+            "UPDATE solicitudes SET estado = 'Proceso Finalizado', url_doc_salida = $1, fecha_cierre_proceso = NOW() WHERE id = $2",
+            [urlSegura, id]
+        );
+        
+        res.json({ msg: 'Documento de Salida subido y proceso finalizado', url: urlSegura });
+    } catch (error) {
+        console.error('Error al subir salida a Cloudinary:', error);
+        res.status(500).json({ error: 'Error interno al procesar el documento de salida.' });
     }
 };

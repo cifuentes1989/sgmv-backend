@@ -31,7 +31,8 @@ router.put('/cierre/:id', authMiddleware, controller.cerrarProceso);
 
 // --- Rutas Generales / Archivos / Notificaciones ---
 router.get('/notificaciones', authMiddleware, controller.obtenerNotificaciones); 
-router.put('/archivo/subir-evidencia/:id', authMiddleware, upload.single('evidencia'), controller.subirEvidenciaYFinalizar);
+router.put('/archivo/subir-ingreso/:id', authMiddleware, upload.single('evidencia'), controller.subirDocumentoIngreso);
+router.put('/archivo/subir-salida-cierre/:id', authMiddleware, upload.single('evidencia'), controller.subirDocumentoSalidaYCerrar);
 
 module.exports = router;
 // HOLA GIT
